@@ -7,6 +7,15 @@ import (
 	"sort"
 )
 
+/*
+Implementación del algoritmo Graham Scan para computar la cantidad de "capas"
+derviables de un conjunto de puntos P. 7ma tarea de Diseño de Algoritmos I
+(CI5651). Universidad Simón Bolívar. Trimestre Sep-Dic 2024.
+
+Autor: Santiago Finamore
+Carné: 1810125
+*/
+
 // Tipo de datos punto
 type Point struct {
 	x int
@@ -20,10 +29,19 @@ func (p Point) String() string {
 	return fmt.Sprintf("(%d, %d)", p.x, p.y)
 }
 
+/*
+Función que retorna el cuadrado de la distancia cartesiana
+entre dos puntos.
+*/
 func sqDist(p Point, q Point) int {
 	return (p.x-q.x)*(p.x-q.x) + (p.y-q.y)*(p.y-q.y)
 }
 
+/*
+Función que dados 3 puntos, p, q y r; indica la orientación general del ángulo
+entre las rectas q - p y r - q. Si el sentido obtenido es horario, retorna 2; si es
+antihorario, retorna 1; y si son colineares, retorna 0.
+*/
 func orientation(p Point, q Point, r Point) int {
 	val := (q.y-p.y)*(r.x-q.x) - (q.x-p.x)*(r.y-q.y)
 
@@ -78,17 +96,21 @@ func grahamScan(pointSet []Point) []Point {
 		return []Point{}
 	}
 
+	if len(pointSet) == 3 {
+		return pointSet
+	}
+
 	s := PointStack{} //Pila vacía
 
 	//Se busca el elemento más bajo del conjunto
-	lowestPoint := Point{math.MinInt, math.MaxInt}
+	lowestPoint := Point{math.MaxInt, math.MaxInt}
 	minIndex := -1
 	for i, e := range pointSet {
 		if e.y < lowestPoint.y {
 			lowestPoint = e
 			minIndex = i
 		} else if e.y == lowestPoint.y {
-			if e.x > lowestPoint.x {
+			if e.x < lowestPoint.x {
 				lowestPoint = e
 				minIndex = i
 			}
@@ -116,22 +138,18 @@ func grahamScan(pointSet []Point) []Point {
 	filtSet := []Point{}
 	filtSet = append(filtSet, pointSet[0])
 
-	for i := 1; i < len(pointSet)-1; i++ {
-		if orientation(lowestPoint, pointSet[i], pointSet[i+1]) == 0 {
-			continue
+	for i := 1; i < len(pointSet); i++ {
+		for i < len(pointSet)-1 && orientation(lowestPoint, pointSet[i], pointSet[i+1]) == 0 {
+			i += 1
 		}
 		filtSet = append(filtSet, pointSet[i])
-	}
-
-	if orientation(lowestPoint, pointSet[len(pointSet)-2], pointSet[len(pointSet)-1]) != 0 {
-		filtSet = append(filtSet, pointSet[len(pointSet)-1])
 	}
 
 	if len(filtSet) < 3 {
 		return []Point{}
 	}
 
-	s.push(lowestPoint)
+	s.push(filtSet[0])
 	s.push(filtSet[1])
 	s.push(filtSet[2])
 
@@ -146,16 +164,18 @@ func grahamScan(pointSet []Point) []Point {
 }
 
 func main() {
-	pointSet := []Point{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6},
+	pointSet := []Point{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6},
 		{0, 6}, {1, 5}, {2, 4}, {4, 2}, {5, 1}, {6, 0}}
 
 	var currentLayer []Point
 	counter := 0
 
-	for len(pointSet) > 1 {
+	for len(pointSet) > 2 {
 		currentLayer = grahamScan(pointSet)
 		counter += 1
 		newSet := []Point{}
+		//Esta es la diferencia de conjuntos. Soy consciente de q es O(n^2) pero tenía sueño
+		//En un lenguaje con tree sets esta operación se puede hacer en logn
 		for _, e1 := range pointSet {
 			foundFlag := false
 			for _, e2 := range currentLayer {
@@ -169,6 +189,11 @@ func main() {
 			}
 		}
 		pointSet = newSet
+	}
+
+	if len(pointSet) == 1 {
+		//Si queda un punto en el conjunto es contado como una capa válida
+		counter += 1
 	}
 
 	fmt.Println(counter)
